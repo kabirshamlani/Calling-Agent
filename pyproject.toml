@@ -1,0 +1,36 @@
+[project]
+name = "helpline"
+version = "0.1.0"
+description = "A phone agent that answers where-is-my-money questions from six help articles and hands off everything else."
+requires-python = ">=3.12"
+dependencies = [
+    "livekit-agents[silero]>=1.8.13",
+    "livekit-plugins-deepgram>=1.8.13",
+    "livekit-plugins-google>=1.8.13",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.4",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/helpline"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF", "BLE"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/helpline/brain.py" = ["BLE001"]  # any model failure at all must become a handoff
+"src/helpline/agent.py" = ["BLE001"]  # the room must be closed whatever went wrong
+"src/helpline/prompt.py" = ["E501"]  # the prompt is prose; its line breaks are part of it
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,103 @@
+{
+  "model": "gemini-3.1-flash-lite",
+  "date": "2026-11-23",
+  "prompt_version": "6fa6596f8699",
+  "runs": 3,
+  "cases": 30,
+  "cases_passing_every_run": 26,
+  "wrongly_answered": 2,
+  "of_non_answer_attempts": 60,
+  "wrongly_handed_off": 1,
+  "of_answer_attempts": 30,
+  "model_errors": 0,
+  "unstable_cases": [
+    "h-in-03",
+    "h-near-02",
+    "h-near-06"
+  ],
+  "confusion": {
+    "answer -> answer": 29,
+    "handoff -> handoff": 46,
+    "handoff -> answer": 2,
+    "chat -> chat": 6,
+    "end -> end": 3,
+    "unclear -> unclear": 3,
+    "answer -> handoff": 1
+  },
+  "seconds_median": 0.785,
+  "seconds_p95": 0.93,
+  "failures": [
+    {
+      "id": "h-in-07",
+      "say": "You said it would be there by Friday and it's Monday now.",
+      "expect": "answer",
+      "got": "answer",
+      "detail": "03",
+      "reply": "[answer:03] We mark your transfer as complete when we've sent the money to the recipient's bank, but the bank may take up to one working day to release it. Since weekends and holidays aren't working days, it's common for delays to occur during these times.",
+      "problems": [
+        "cited article 03, expected 04 or 02 or 01"
+      ],
+      "seconds": 0.77
+    },
+    {
+      "id": "h-near-06",
+      "say": "What documents do you need for a large transfer?",
+      "expect": "handoff",
+      "got": "answer",
+      "detail": "04",
+      "reply": "[answer:04] We sometimes run extra checks, such as asking for ID or proof of where money came from, to keep your account safe. If we need documents from you, we will send an email explaining what is required.",
+      "problems": [
+        "expected handoff, got answer (04)"
+      ],
+      "seconds": 0.78
+    },
+    {
+      "id": "h-in-07",
+      "say": "You said it would be there by Friday and it's Monday now.",
+      "expect": "answer",
+      "got": "answer",
+      "detail": "03",
+      "reply": "[answer:03] We mark your transfer as complete when we've sent the money to the recipient bank. Sometimes banks take up to one working day to process and release the money. If it's still not there, your recipient can ask their bank to check on the payment using a transfer receipt.",
+      "problems": [
+        "cited article 03, expected 04 or 02 or 01"
+      ],
+      "seconds": 0.74
+    },
+    {
+      "id": "h-near-02",
+      "say": "The bank bounced it. How many days until it is back on my card?",
+      "expect": "handoff",
+      "got": "answer",
+      "detail": "04",
+      "reply": "[answer:04] If your bank rejects a payment, the money is sent back to us. Once the status shows the money is returning, you can either fix the details or cancel the transfer. Refunds can take a few days to process depending on the currency and payment method.",
+      "problems": [
+        "expected handoff, got answer (04)"
+      ],
+      "seconds": 0.86
+    },
+    {
+      "id": "h-in-03",
+      "say": "Does a public holiday in the other country slow things down?",
+      "expect": "answer",
+      "got": "handoff",
+      "detail": "unsupported_number",
+      "reply": "[answer:04] Yes, it can. Banks don't process transfers on public holidays, and our estimates only count working days. If a holiday falls on a day your transfer is expected, it might not move until the next working day.",
+      "problems": [
+        "expected answer, got handoff (unsupported_number)"
+      ],
+      "seconds": 0.68
+    },
+    {
+      "id": "h-in-07",
+      "say": "You said it would be there by Friday and it's Monday now.",
+      "expect": "answer",
+      "got": "answer",
+      "detail": "03",
+      "reply": "[answer:03] We mark your transfer as complete once we've sent the money to the recipient's bank. Some banks are slower than others and may take an extra working day to process and release it into your recipient's account.",
+      "problems": [
+        "cited article 03, expected 04 or 02 or 01"
+      ],
+      "seconds": 0.83
+    }
+  ]
+}

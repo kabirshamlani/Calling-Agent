@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Helpline · calls</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script>
+<style>
+  main { max-width: 860px; margin: 0 auto; padding: 20px 28px 100px; }
+  h1 { font: 400 clamp(36px, 6vw, 56px)/1 var(--serif); letter-spacing: -.02em; margin: 30px 0 22px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 26px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+  .stat b { display: block; font: 400 38px/1 var(--serif); font-variant-numeric: tabular-nums; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filters button {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+    padding: 7px 13px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--mute); cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; margin-bottom: 10px; }
+  summary { list-style: none; cursor: pointer; padding: 15px 20px; display: flex; gap: 14px; align-items: baseline; }
+  summary::-webkit-details-marker { display: none; }
+  .who { font-weight: 600; } .when { color: var(--mute); font-size: 13px; }
+  .length { color: var(--mute); font-size: 13px; margin-left: auto; }
+  .body { padding: 0 22px 22px; border-top: 1px solid var(--line); }
+  .empty { color: var(--mute); text-align: center; padding: 60px 0; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } .length { display: none; } }
+</style>
+
+<main>
+  <h1>Calls</h1>
+  <div class="stats" id="stats"></div>
+  <div class="filters" id="filters">
+    <button data-show="all" aria-pressed="true">All</button><button data-show="handoff">Handed off</button>
+    <button data-show="end">Said goodbye</button><button data-show="phone">From a phone</button>
+    <button data-show="browser">From the browser</button>
+  </div>
+  <div id="list"></div>
+</main>
+
+<script>
+topBar("/history");
+const $ = id => document.getElementById(id);
+let articles = {}, records = [], showing = "all";
+const opened = new Set();
+
+const origin = id => id.includes("+") ? "phone" : id.startsWith("web-") ? "browser" : "test";
+const title = id => ({phone: (id.match(/\+\w+/) || ["Phone call"])[0], browser: "Browser call", test: "Scripted test call"})[origin(id)];
+const ending = call => ({handoff: "Passed to a human", end: "Said goodbye"})[call.turns.at(-1).action] || "Caller hung up";
+
+function render() {
+  const calls = [...groupCalls(records).values()].reverse();
+  const turns = calls.flatMap(call => call.turns);
+  const count = action => turns.filter(turn => turn.action === action).length;
+  const stats = [[calls.length, "calls"], [count("answer"), "answers"], [count("handoff"), "handoffs"],
+                 [calls.filter(call => origin(call.id) === "phone").length, "from a phone"]];
+  $("stats").innerHTML = stats.map(([n, what]) => `<div class="stat"><b>${n}</b><span class="mono mute">${what}</span></div>`).join("");
+
+  const visible = calls.filter(call => showing === "all" || call.turns.at(-1).action === showing || origin(call.id) === showing);
+  $("list").innerHTML = visible.length ? visible.map(call => `
+    <details data-id="${esc(call.id)}" ${opened.has(call.id) ? "open" : ""}>
+      <summary><span class="who">${esc(title(call.id))}</span><span class="when">${esc(call.time.replace("T", " ").slice(0, 16))}</span>
+        <span class="length">${call.turns.length} turn${call.turns.length === 1 ? "" : "s"}</span>
+        <span class="pill ${call.turns.at(-1).action}">${ending(call)}</span></summary>
+      <div class="body">${call.turns.map(turn => turnHtml(turn, articles)).join("")}</div></details>`).join("")
+    : '<p class="empty">No calls to show.</p>';
+  for (const row of document.querySelectorAll("details")) {
+    row.addEventListener("toggle", () => row.open ? opened.add(row.dataset.id) : opened.delete(row.dataset.id));
+  }
+}
+
+$("filters").onclick = event => {
+  if (!event.target.dataset.show) return;
+  showing = event.target.dataset.show;
+  for (const button of document.querySelectorAll("#filters button")) button.setAttribute("aria-pressed", button.dataset.show === showing);
+  render();
+};
+followLog(null, latest => { records = latest; render(); });
+fetch("/api/articles").then(response => response.json()).then(found => { articles = found; render(); });
+</script>
+</html>

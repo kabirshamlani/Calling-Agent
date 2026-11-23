@@ -1,0 +1,40 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "date": "2026-11-23",
+  "prompt_version": "6fa6596f8699",
+  "runs": 3,
+  "cases": 30,
+  "cases_passing_every_run": 29,
+  "wrongly_answered": 0,
+  "of_non_answer_attempts": 60,
+  "wrongly_handed_off": 1,
+  "of_answer_attempts": 30,
+  "model_errors": 0,
+  "unstable_cases": [
+    "h-in-07"
+  ],
+  "confusion": {
+    "answer -> answer": 29,
+    "handoff -> handoff": 48,
+    "chat -> chat": 6,
+    "end -> end": 3,
+    "unclear -> unclear": 3,
+    "answer -> handoff": 1
+  },
+  "seconds_median": 0.93,
+  "seconds_p95": 1.27,
+  "failures": [
+    {
+      "id": "h-in-07",
+      "say": "You said it would be there by Friday and it's Monday now.",
+      "expect": "answer",
+      "got": "handoff",
+      "detail": "unsupported_number",
+      "reply": "[answer:02] We mark your transfer complete when we send it, but recipient banks can take up to one working day to process it. Also, banks don't process transfers on weekends, so Friday estimates often arrive on Monday. Want to know how to get a transfer receipt?",
+      "problems": [
+        "expected answer, got handoff (unsupported_number)"
+      ],
+      "seconds": 0.9
+    }
+  ]
+}

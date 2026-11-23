@@ -1,0 +1,24 @@
+{
+  "model": "gemini-3.1-flash-lite",
+  "date": "2026-11-23",
+  "prompt_version": "6fa6596f8699",
+  "runs": 3,
+  "cases": 78,
+  "cases_passing_every_run": 78,
+  "wrongly_answered": 0,
+  "of_non_answer_attempts": 150,
+  "wrongly_handed_off": 0,
+  "of_answer_attempts": 84,
+  "model_errors": 0,
+  "unstable_cases": [],
+  "confusion": {
+    "answer -> answer": 84,
+    "handoff -> handoff": 117,
+    "chat -> chat": 18,
+    "unclear -> unclear": 6,
+    "end -> end": 9
+  },
+  "seconds_median": 0.74,
+  "seconds_p95": 0.94,
+  "failures": []
+}

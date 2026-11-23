@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Helpline · talk to the agent</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script>
+<style>
+  .stage { max-width: 780px; margin: 0 auto; padding: 4px 24px 80px; text-align: center; position: relative; }
+  .stage > * { position: relative; z-index: 1; }
+  .stage > .halo {
+    position: absolute; z-index: 0; left: 50%; top: 186px; width: 720px; height: 720px; transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, var(--tone) 0%, transparent 70%); opacity: var(--glow);
+    pointer-events: none; transition: opacity .6s;
+  }
+  .stage { --tone: var(--mute); }
+  .stage[data-state="connecting"], .stage[data-state="initializing"], .stage[data-state="thinking"] { --tone: var(--think); }
+  .stage[data-state="listening"] { --tone: var(--accent); }
+  .stage[data-state="speaking"] { --tone: var(--speak); }
+  .stage[data-state="error"] { --tone: var(--handoff); }
+
+  .orb { width: 340px; height: 340px; margin: 0 auto; }
+  .orb canvas { width: 340px; height: 340px; display: block; }
+  #call {
+    position: absolute; inset: 86px; border-radius: 50%; border: 0; cursor: pointer; color: var(--bg);
+    background: var(--tone); font: 600 15px var(--sans); display: grid; place-content: center; gap: 4px;
+    box-shadow: 0 18px 50px -18px var(--tone), inset 0 0 0 1px rgba(255, 255, 255, .14);
+    transition: background .5s, transform .2s, box-shadow .5s;
+  }
+  .stage[data-state="idle"] #call, .stage[data-state="error"] #call { background: var(--ink); box-shadow: 0 18px 50px -22px var(--ink); }
+  #call:hover { transform: scale(1.03); } #call:active { transform: scale(.98); } #call:disabled { cursor: default; }
+  #call svg { width: 26px; height: 26px; margin: 0 auto; }
+  #clock { font: 400 12px var(--mono); letter-spacing: .06em; opacity: .8; font-variant-numeric: tabular-nums; }
+
+  #state { margin-top: 2px; color: var(--tone); transition: color .5s; }
+  #hint { margin: 6px 0 0; color: var(--mute); font-size: 13.5px; min-height: 20px; }
+
+  /* the words on screen right now */
+  .caption { margin: 30px auto 0; min-height: 138px; }
+  #heard { font: italic 400 21px/1.35 var(--serif); color: var(--mute); min-height: 28px; margin: 0 0 10px; }
+  #said { font: 400 30px/1.25 var(--serif); letter-spacing: -.012em; margin: 0; text-wrap: balance; }
+  .fresh { animation: rise .45s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+  /* the gate, as lights and a verdict */
+  .gate { display: inline-flex; align-items: center; margin-top: 22px; padding: 10px 16px;
+          background: var(--panel); border: 1px solid var(--line); border-radius: 99px; box-shadow: 0 10px 30px -22px var(--ink); }
+  .check { display: flex; align-items: center; gap: 7px; color: var(--mute); }
+  .check i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); transition: .3s; }
+  .check.ok { color: var(--ink); } .check.ok i { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .check.no { color: var(--handoff); } .check.no i { background: var(--handoff); box-shadow: 0 0 0 4px color-mix(in srgb, var(--handoff) 20%, transparent); }
+  .wire { width: 22px; height: 1px; background: var(--line); margin: 0 9px; }
+  .gate.run #c-source i { transition-delay: .15s; } .gate.run #c-numbers i { transition-delay: .3s; }
+  .gate.run #c-speech i { transition-delay: .45s; } .gate.run #verdict { animation: rise .4s .55s both; }
+  #why { margin: 10px 0 0; color: var(--mute); font-size: 13px; min-height: 20px; }
+  #why a { text-underline-offset: 3px; }
+
+  .after { margin: 26px auto 0; padding: 16px 20px; max-width: 520px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+  .after b { font: 400 22px/1.2 var(--serif); display: block; margin-bottom: 4px; }
+  .after a { text-underline-offset: 3px; }
+
+  details.log { margin: 26px auto 0; text-align: left; }
+  details.log > summary { list-style: none; cursor: pointer; text-align: center; color: var(--mute); }
+  details.log > summary::-webkit-details-marker { display: none; }
+  details.log > summary:hover { color: var(--ink); }
+  #turns { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 4px 22px 22px; margin-top: 14px; }
+
+  .topics { margin: 46px auto 0; max-width: 640px; }
+  .topics p { color: var(--mute); margin: 0 0 12px; }
+  .topics div { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .topic { padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); font-size: 13px; text-decoration: none; transition: .2s; }
+  .topic:hover { border-color: var(--ink); }
+  .dial { margin-top: 20px; color: var(--mute); font-size: 13px; }
+  .dial b { color: var(--ink); font-family: var(--mono); font-weight: 400; letter-spacing: .04em; }
+
+  @media (max-width: 640px) {
+    .orb, .orb canvas { width: 280px; height: 280px; } #call { inset: 70px; } #said { font-size: 24px; }
+    .gate { flex-wrap: wrap; justify-content: center; gap: 8px 14px; border-radius: 18px; } .wire { display: none; }
+    .stage > .halo { width: 520px; height: 520px; top: 150px; }
+  }
+</style>
+
+<main class="stage" id="stage" data-state="idle">
+  <div class="halo"></div>
+
+  <div class="orb">
+    <canvas id="rings" width="680" height="680" aria-hidden="true"></canvas>
+    <button id="call" aria-label="Start a call">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path id="glyph"/></svg>
+      <span id="label">Start a call</span><span id="clock"></span>
+    </button>
+  </div>
+  <div class="mono" id="state" role="status" aria-live="polite">Ready</div>
+  <p id="hint">Press the circle and talk. It uses your microphone.</p>
+
+  <div class="caption">
+    <p id="heard"></p>
+    <p id="said">Ask about a transfer.</p>
+  </div>
+
+  <div class="gate" id="gate" aria-label="Checks on the last reply">
+    <span class="check mono" id="c-label"><i></i>Label</span><span class="wire"></span>
+    <span class="check mono" id="c-source"><i></i>Source</span><span class="wire"></span>
+    <span class="check mono" id="c-numbers"><i></i>Numbers</span><span class="wire"></span>
+    <span class="check mono" id="c-speech"><i></i>Speech</span><span class="wire"></span>
+    <span class="pill chat" id="verdict">Waiting</span>
+  </div>
+  <p id="why">Every reply passes four checks before it is spoken. <a href="/how#gate">How?</a></p>
+
+  <div class="after" id="after" hidden></div>
+
+  <details class="log" id="log" hidden>
+    <summary class="mono">Show the whole call</summary>
+    <div id="turns"></div>
+  </details>
+
+  <div class="topics">
+    <p class="mono">It can answer six things</p>
+    <div id="topics"></div>
+  </div>
+  <p class="dial">Anything else, it hands you to a person.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.25.0/dist/livekit-client.umd.min.js"
+        integrity="sha384-mgnUpkmaZcOb1YpuYfvc9oPtGiRL7gqnGGzj6BUPIv1Sd4MuYXyl0CJ0hYjGUg0z" crossorigin="anonymous"></script>
+<script>
+topBar("/");
+const $ = id => document.getElementById(id);
+const {Room, RoomEvent, Track} = LivekitClient;
+const stage = $("stage");
+let room = null, feed = null, startedAt = null, articles = {}, turnsShown = 0, captionsLive = false;
+let micLevel = null, agentLevel = null, audio = null;
+
+const WORDS = {idle: "Ready", connecting: "Connecting", initializing: "Agent is joining", listening: "Listening",
+               thinking: "Deciding", speaking: "Speaking", error: "Could not start"};
+const ICON = {
+  call: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z",
+  hangUp: "M3 14c5-5 13-5 18 0l-2 3-4-1.5v-3a9 9 0 0 0-6 0v3L5 17Z",
+};
+
+function setState(state, hint) {
+  stage.dataset.state = state;
+  $("state").textContent = WORDS[state] || state;
+  if (hint !== undefined) $("hint").textContent = hint;
+  tone = getComputedStyle(stage).getPropertyValue("--tone").trim();
+}
+
+function setButton(text, icon) {
+  $("label").textContent = text;
+  $("call").setAttribute("aria-label", text);
+  $("glyph").setAttribute("d", ICON[icon]);
+}
+
+function showLine(id, text) {
+  const line = $(id);
+  if (line.textContent === text) return;
+  const grew = text.startsWith(line.textContent) && line.textContent;   // a caption growing word by word
+  line.textContent = text;
+  if (!grew) { line.classList.remove("fresh"); void line.offsetWidth; line.classList.add("fresh"); }
+}
+
+// --- sound levels, drawn as a ring -----------------------------------------------------
+
+function meter(mediaTrack) {
+  audio ??= new AudioContext();
+  const analyser = audio.createAnalyser();
+  analyser.fftSize = 256; analyser.smoothingTimeConstant = .75;
+  audio.createMediaStreamSource(new MediaStream([mediaTrack])).connect(analyser);
+  const levels = new Uint8Array(analyser.frequencyBinCount);
+  return () => { analyser.getByteFrequencyData(levels); return levels; };
+}
+
+const canvas = $("rings"), pen = canvas.getContext("2d");
+const BARS = 96, bar = new Float32Array(BARS);
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let tone = "";
+document.addEventListener("themechange", () => setState(stage.dataset.state));
+
+function draw(now) {
+  const state = stage.dataset.state, mid = canvas.width / 2, seconds = now / 1000;
+  const waiting = ["thinking", "connecting", "initializing"].includes(state);
+  const source = state === "speaking" ? agentLevel : state === "listening" ? micLevel : null;
+  const levels = source ? source() : null;
+  pen.clearRect(0, 0, canvas.width, canvas.height);
+  pen.strokeStyle = tone; pen.lineWidth = 5; pen.lineCap = "round";
+  for (let i = 0; i < BARS; i++) {
+    const around = i / BARS * Math.PI * 2;
+    const target = levels ? levels[2 + Math.floor((i < BARS / 2 ? i : BARS - i) * .9)] / 255   // mirrored, to read as a ring
+                 : waiting ? .12 + .5 * Math.max(0, Math.cos(around - seconds * 4.2)) ** 6     // one arc going round
+                 : .07 + .05 * Math.sin(seconds * 1.3 + i * .26);                              // breathing
+    bar[i] += (target - bar[i]) * .22;
+    const angle = around - Math.PI / 2, inner = 208, outer = inner + 10 + bar[i] * 104;
+    pen.globalAlpha = .28 + bar[i] * .72;
+    pen.beginPath();
+    pen.moveTo(mid + Math.cos(angle) * inner, mid + Math.sin(angle) * inner);
+    pen.lineTo(mid + Math.cos(angle) * outer, mid + Math.sin(angle) * outer);
+    pen.stroke();
+  }
+  if (!calm) requestAnimationFrame(draw);
+}
+
+// --- the call ------------------------------------------------------------------------------
+
+async function start() {
+  $("call").disabled = true;
+  setState("connecting", "");
+  clearCall();
+  try {
+    const response = await fetch("/api/token", {method: "POST"});
+    if (!response.ok) throw new Error("The website could not create a call.");
+    const pass = await response.json();
+    feed = followLog(pass.room, showTurns);
+    room = new Room();
+    room.on(RoomEvent.TrackSubscribed, track => {
+      if (track.kind !== Track.Kind.Audio) return;
+      document.body.appendChild(track.attach());
+      agentLevel = meter(track.mediaStreamTrack);
+    });
+    room.on(RoomEvent.ParticipantAttributesChanged, (changed, who) => {
+      if (changed["lk.agent.state"]) setState(who.attributes["lk.agent.state"]);
+    });
+    room.on(RoomEvent.Disconnected, ended);
+    room.registerTextStreamHandler("lk.transcription", caption);
+    await room.connect(pass.url, pass.token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    micLevel = meter(room.localParticipant.getTrackPublication(Track.Source.Microphone).track.mediaStreamTrack);
+    startedAt = Date.now();
+    setButton("Hang up", "hangUp");
+    setState("initializing", "Wait for the greeting, then speak. You can interrupt it.");
+  } catch (error) {
+    room?.off(RoomEvent.Disconnected, ended);   // this is a failed start, not the end of a call
+    room?.disconnect();
+    tidyUp();
+    const blocked = error.name === "NotAllowedError" || error.name === "NotFoundError";
+    setState("error", blocked ? "The microphone is blocked or missing. Allow it for this page and try again."
+                              : error.message + " Is the agent running? Start it with: make serve");
+  }
+  $("call").disabled = false;
+}
+
+// Live captions from LiveKit: the caller's words as they are heard, the agent's as they are spoken.
+async function caption(reader, speaker) {
+  const mine = speaker.identity === room?.localParticipant.identity;
+  let text = "";
+  for await (const piece of reader) {
+    if (mine) $("hint").textContent = "";   // they have the hang of it
+    captionsLive = true;
+    text += piece;
+    showLine(mine ? "heard" : "said", mine ? "“" + text.trim() + "”" : text.trim());
+  }
+}
+
+function ended() {
+  tidyUp();
+  setButton("Call again", "call");
+  setState("idle", "The call has ended.");
+}
+
+function tidyUp() {
+  document.querySelectorAll("audio").forEach(player => player.remove());
+  feed?.close();
+  room = feed = startedAt = micLevel = agentLevel = null;
+  $("clock").textContent = "";
+}
+
+function clearCall() {
+  turnsShown = 0; captionsLive = false;
+  showLine("heard", ""); showLine("said", "…");
+  $("log").hidden = $("after").hidden = true;
+  light(null);
+}
+
+$("call").onclick = () => room ? room.disconnect() : start();
+setInterval(() => {
+  if (!startedAt) return;
+  const seconds = Math.floor((Date.now() - startedAt) / 1000);
+  $("clock").textContent = Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+}, 500);
+
+// --- the gate lights and the record, from the agent's own log ---------------------------------
+
+const BLOCKED_AT = {bad_label: "c-label", model_error: "c-label", unsupported_number: "c-numbers",
+                    not_plain_speech: "c-speech", too_long: "c-speech"};
+
+function light(turn) {
+  const checks = ["c-label", "c-source", "c-numbers", "c-speech"];
+  const failedAt = turn ? checks.indexOf(BLOCKED_AT[turn.detail]) : -1;
+  checks.forEach((id, i) => {
+    const passed = turn && (failedAt === -1 ? i === 0 || turn.action === "answer" : i < failedAt);
+    $(id).className = "check mono" + (i === failedAt ? " no" : passed ? " ok" : "");
+  });
+  $("verdict").className = "pill " + (turn ? turn.action : "chat");
+  $("verdict").textContent = turn ? TAGS[turn.action] : "Waiting";
+  if (turn) { $("gate").classList.remove("run"); void $("gate").offsetWidth; $("gate").classList.add("run"); }
+}
+
+function showTurns(records) {
+  const turns = records.filter(record => "action" in record);
+  if (turns.length === turnsShown) return;
+  turnsShown = turns.length;
+  const last = turns.at(-1);
+  if (!captionsLive) {   // live captions normally fill these two lines; this is the fallback
+    showLine("heard", last.heard ? "“" + last.heard + "”" : "");
+    showLine("said", last.said);
+  }
+  light(last);
+  const lead = {answer: "Answered ", handoff: "Passed to a human: ", end: "Ended: "}[last.action] || "";
+  const timing = last.model_ms ? ` · heard in ${(last.end_of_turn_ms / 1000).toFixed(1)} s, decided in ${(last.model_ms / 1000).toFixed(1)} s` : "";
+  $("why").innerHTML = lead + because(last, articles) + timing;
+  $("log").hidden = false;
+  $("turns").innerHTML = turns.map(turn => turnHtml(turn, articles)).join("");
+  if (last.action === "handoff" || last.action === "end") {
+    $("hint").textContent = "The agent is ending the call.";
+    const answered = turns.filter(turn => turn.action === "answer").length;
+    $("after").hidden = false;
+    $("after").innerHTML = `<b>${last.action === "handoff" ? "Passed to a human" : "Call finished"}</b>
+      ${answered} question${answered === 1 ? "" : "s"} answered from the articles.
+      ${last.action === "handoff" ? "On a real line you would now be with a person. Here the call ends." : ""}
+      <a href="/history">See every call</a>`;
+  }
+}
+
+fetch("/api/articles").then(response => response.json()).then(found => {
+  articles = found;
+  $("topics").innerHTML = Object.values(found).map(article =>
+    `<a class="topic" href="${esc(article.source)}" target="_blank" rel="noopener">${esc(article.title)}</a>`).join("");
+});
+setButton("Start a call", "call");
+setState("idle");
+requestAnimationFrame(draw);
+</script>
+</html>
